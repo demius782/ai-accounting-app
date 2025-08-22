@@ -1,7 +1,7 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch:  # 手动触发构建
+  workflow_dispatch:
   push:
     branches: [ main ]
 
@@ -33,13 +33,13 @@ jobs:
 
     - name: Copy web assets
       run: |
-        # 复制web文件到Cordova项目
         cp index.html cordova-app/www/
         mkdir -p cordova-app/www/src
         cp -r src/* cordova-app/www/src/
         
-        # 创建必要的Cordova配置文件
-        echo '<?xml version="1.0" encoding="UTF-8"?>
+        # 创建config.xml文件
+        cat > cordova-app/config.xml << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
 <widget id="com.demius.accounting" version="1.0.0" xmlns="http://www.w3.org/ns/widgets">
     <name>Accounting App</name>
     <description>Personal Accounting Application</description>
@@ -52,7 +52,8 @@ jobs:
         <preference name="android-minSdkVersion" value="22" />
         <preference name="android-targetSdkVersion" value="33" />
     </platform>
-</widget>' > cordova-app/config.xml
+</widget>
+EOF
 
     - name: Build APK
       run: |
@@ -68,5 +69,4 @@ jobs:
     - name: Show APK info
       run: |
         echo "✅ APK构建完成!"
-        echo "📦 APK文件路径: cordova-app/platforms/android/app/build/outputs/apk/release/"
         find cordova-app/platforms/android/app/build/outputs/apk/release/ -name "*.apk"

@@ -1,0 +1,16 @@
+{
+  "name": "ai-accounting-app",
+  "version": "1.0.0",
+  "description": "AI自动记账APP",
+  "main": "index.html",
+  "scripts": {
+    "dev": "live-server --port=3000",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "chart.js": "^4.4.8"
+  },
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
+}

@@ -1,48 +1,72 @@
-name: Build and Deploy Web App
+name: Build Android APK
 
 on:
+  workflow_dispatch:  # 手动触发构建
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
+  build-apk:
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
+    - name: Setup Java 11
+      uses: actions/setup-java@v3
       with:
-        node-version: '18'
-        cache: 'npm'
+        distribution: 'temurin'
+        java-version: '11'
 
-    - name: Install dependencies
-      run: npm ci
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
 
-    - name: Build verification
+    - name: Install Cordova
+      run: npm install -g cordova@11.0.0
+
+    - name: Create Cordova project
       run: |
-        echo "✅ Web应用构建验证通过"
-        echo "项目包含以下文件:"
-        find . -name "*.html" -o -name "*.js" -o -name "*.json" | head -10
+        cordova create cordova-app com.demius.accounting "Accounting App"
+        cd cordova-app
+        cordova platform add android@10.1.2
 
-    - name: Create deployment package
+    - name: Copy web assets
       run: |
-        zip -r web-app.zip . -x "*.git*" "node_modules/*" ".github/*"
+        # 复制web文件到Cordova项目
+        cp index.html cordova-app/www/
+        mkdir -p cordova-app/www/src
+        cp -r src/* cordova-app/www/src/
+        
+        # 创建必要的Cordova配置文件
+        echo '<?xml version="1.0" encoding="UTF-8"?>
+<widget id="com.demius.accounting" version="1.0.0" xmlns="http://www.w3.org/ns/widgets">
+    <name>Accounting App</name>
+    <description>Personal Accounting Application</description>
+    <author email="demius@qq.com" href="https://github.com/demius782">Demius</author>
+    <content src="index.html" />
+    <access origin="*" />
+    <allow-intent href="http://*/*" />
+    <allow-intent href="https://*/*" />
+    <platform name="android">
+        <preference name="android-minSdkVersion" value="22" />
+        <preference name="android-targetSdkVersion" value="33" />
+    </platform>
+</widget>' > cordova-app/config.xml
 
-    - name: Upload deployment package
+    - name: Build APK
+      run: |
+        cd cordova-app
+        cordova build android --release
+
+    - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: web-app-package
-        path: web-app.zip
+        name: accounting-app-apk
+        path: cordova-app/platforms/android/app/build/outputs/apk/release/*.apk
 
-    - name: Deploy info
+    - name: Show APK info
       run: |
-        echo "🚀 Web应用准备就绪"
-        echo "📱 转换为APK的推荐方法:"
-        echo "1. 使用 Cordova: npx cordova create myapp && cd myapp && cordova platform add android"
-        echo "2. 使用 Capacitor: npm install @capacitor/core @capacitor/android && npx cap init"
-        echo "3. 在线服务: https://www.pwabuilder.com/ 或 https://appmaker.xyz/"
-        echo ""
-        echo "📦 当前构建包已生成: web-app.zip"
+        echo "✅ APK构建完成!"
+        echo "📦 APK文件路径: cordova-app/platforms/android/app/build/outputs/apk/release/"
+        find cordova-app/platforms/android/app/build/outputs/apk/release/ -name "*.apk"
